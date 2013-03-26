@@ -2,7 +2,7 @@ CC=gcc -g
 CFLAGS=-I.
 
 tb-cache: main.o trans_all.o sys.o cpu-exec.o
-  $(CC) main.o trans_all.o sys.o cpu-exec.o -o tb-cache
+	  $(CC) main.o trans_all.o sys.o cpu-exec.o -o tb-cache
 
 main.o: main.c 
 	$(CC) -c main.c	
