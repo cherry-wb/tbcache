@@ -15,6 +15,12 @@
 #define LINE_MAX 10
 #define MAX_PC 5000
 
+/* code generation context */
+/*static*/ TCGContext tcg_ctx;
+
+/* Translation Buffer context */
+/*static*/ TBContext tb_ctx;
+
 
 uint16_t src[MAX_PC][2];
 

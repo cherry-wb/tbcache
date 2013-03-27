@@ -27,10 +27,10 @@
 
 
 /* code generation context */
-//extern TCGContext tcg_ctx;
+extern TCGContext tcg_ctx;
 
 /* Translation Buffer context */
-//extern TBContext tb_ctx;
+extern TBContext tb_ctx;
 
 
 

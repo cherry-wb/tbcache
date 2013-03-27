@@ -417,11 +417,6 @@ static inline void tb_add_jump(TranslationBlock *tb, int n,
     }
 }
 
-/* code generation context */
-/*static*/ TCGContext tcg_ctx;
-
-/* Translation Buffer context */
-/*static*/ TBContext tb_ctx;
 
 typedef uint64_t tcg_target_ulong;
 

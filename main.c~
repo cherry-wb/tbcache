@@ -88,7 +88,7 @@ int main(int argc, char **argv)
    for(;;)
    	{
    		tb = tb_find_fast(env);//tb_gen_code(env, pc ,0 ,0 , 0);							// should be called inside find_slow()
-    fprintf(stderr,"(main) tb @ = %u \n",tb->pc);
+    fprintf(stderr,"(main) tb @ = %u \n",&tb);
          spin_lock(&tcg_ctx.tb_ctx.tb_lock);									// why ?
 //         tb = tb_find_fast(env);
          /* Note: we do it here to avoid a gcc bug on Mac OS X when doing it in tb_find_slow */
