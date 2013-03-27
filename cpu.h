@@ -1,5 +1,5 @@
 
-typedef unsigned long tcg_target_ulong;
+//typedef unsigned long tcg_target_ulong;
 
 
 /* Restriction from include/qom/cpu.h */

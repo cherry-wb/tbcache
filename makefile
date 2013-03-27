@@ -18,5 +18,10 @@ sys.o: sys.c
 cpu-exec.o: cpu-exec.c
 	$(CC) -c cpu-exec.c
 
+# restriction from 'tcg/tcg.c'
+tcg.o: tcg.c
+	$(CC) -c tcg.c	
+
 clean:
 	rm -rf *o tb-cache
+

@@ -9,7 +9,7 @@
 
 #define CPUArchState struct CPUX86State
 
-#define TF_MASK   	0x00000100
+#define TF_MASK 		0x00000100
 #define IF_MASK 		0x00000200
 #define DF_MASK 		0x00000400
 #define IOPL_MASK		0x00003000
@@ -418,7 +418,7 @@ static inline void tb_add_jump(TranslationBlock *tb, int n,
 }
 
 
-
+typedef uint64_t tcg_target_ulong;
 
 /*---------------------------------------------------------------------*/
 

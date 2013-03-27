@@ -13,8 +13,9 @@
 
 /*---------added defines---------*/
 #define LINE_MAX 10
-#define MAX_PC 100
+#define MAX_PC 1000
 
+uint8_t src[MAX_PC][2];
 
 static inline void map_exec(void *addr, long size)
 {
@@ -34,7 +35,7 @@ static inline void map_exec(void *addr, long size)
 
 static inline int des_adr(char* line)
 {
-  return((int)((line[2]-'0')*100+(line[3]-'0')*10+(line[4]-'0')));
+	return((int)((line[2]-'0')*100+(line[3]-'0')*10+(line[4]-'0')));
 }
 	
 	
@@ -42,3 +43,4 @@ static inline int des_adr(char* line)
 	
 	
 #endif /* _MAIN_H_ */
+

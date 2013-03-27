@@ -1,5 +1,5 @@
    /***************************************************************
-  *	Optimization of Qemu translation cache policy					*
+	*	Optimization of Qemu translation cache policy					*
 	*																					*
 	*	FERJANI SABER - Tima Lab - SLS Team									*
 	*																					*
@@ -15,7 +15,7 @@
 #include "trans_all.h"
 
 
-typedef uint64_t tcg_target_ulong;
+
 
 unsigned long pc = 0;
 
@@ -29,7 +29,7 @@ tcg_target_ulong next_tb;
 
 int main(int argc, char **argv)
 {
-	uint8_t src[MAX_PC][2];
+
    char line[LINE_MAX];
 
 	if (argc<2) 
@@ -60,19 +60,20 @@ int main(int argc, char **argv)
      	}
      src[pc++][0]=line[0]; 
    }
+   src[pc][0]=0; 
    fclose(f);
    
-	 /*  	
- 		unsigned long Total_Nb_Inst=pc;
-  		for(pc=0;pc<Total_Nb_Inst;pc++) 
-  			printf("%3d : %c  : %d \n",pc,src[pc][0],src[pc][1]);
-    */
+	 
+/* 	unsigned long Total_Nb_Inst=pc;
+  	for(pc=0;pc<Total_Nb_Inst;pc++) 
+  			printf("%3d : %c  : %d \n",pc,src[pc][0],src[pc][1]);*/
+    
    
    pc=0;
    
 
    TranslationBlock *tb;																//see: tcg_exec_init()
- 	code_gen_alloc(0);																	// 0 mean default size	
+ 	code_gen_alloc(0);																	// 0 mean default size	-- this init tcg_ctx
 
 //   uint8_t *tc_ptr;																		// ptr to translated code
 
@@ -82,11 +83,16 @@ int main(int argc, char **argv)
    memset(tcg_ctx.tb_ctx.tb_phys_hash, 0, CODE_GEN_PHYS_HASH_SIZE * sizeof(void *));
    env.tb_jmp_cache[tb_jmp_cache_hash_func(pc)] = tb;  						//added from tb_find_slow()
    
-   tcg_ctx.tb_ctx.tb_invalidated_flag = 0;
-   getchar();
+   tcg_ctx.tb_ctx.tb_invalidated_flag = 0;					
+//   getchar();
    fprintf( stderr, "max tb= %d \n",tcg_ctx.code_gen_max_blocks );
 
-	tcg_ctx.code_gen_max_blocks=15;
+	tcg_ctx.code_gen_max_blocks=2000;
+	
+	printf("tcg_ctx.code_gen_ptr=%ld tcg_ctx.code_gen_buffer=%d \n",(unsigned long)(tcg_ctx.code_gen_ptr), (unsigned long) (tcg_ctx.code_gen_buffer));
+   
+   tcg_ctx.code_gen_ptr=tcg_ctx.code_gen_buffer;				// init code_gen_ptr
+           
    for(;;)
    	{
    		tb_gen_code(env, pc ,0 ,0 , 0);
@@ -106,10 +112,9 @@ int main(int argc, char **argv)
 //                             next_tb & TB_EXIT_MASK, tb);
 //                }
 
-          spin_unlock(&tcg_ctx.tb_ctx.tb_lock);
+         spin_unlock(&tcg_ctx.tb_ctx.tb_lock);
 
-          getchar();                 											//step by step
-
+/*       getchar();  */               											//step by step
 
   		}
 }

@@ -10,7 +10,7 @@
 
 
 /*----------------------------------------------------------------*/
-/*  				Translation Block Lookup Functions						*/	
+/*					Translation Block Lookup Functions						*/	
 /*----------------------------------------------------------------*/
 
 // To Be Defined
@@ -35,13 +35,13 @@ extern    target_ulong cs_base, pc;           //originally not 'extern' !
        is executed. */
 //   cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);    
 	    tb = env->tb_jmp_cache[tb_jmp_cache_hash_func(pc)];
-	    if (unlikely(!tb || tb->pc != pc 			//|| tb->cs_base != cs_base ||  tb->flags != flags
-	    			) ) 
-    {
+//	    if (unlikely(!tb || tb->pc != pc 			//|| tb->cs_base != cs_base ||  tb->flags != flags
+//	    			) ) 
+//    {
 //			fprintf(stderr,"Warning: calling tb_find_slow!\n");                 	
 //    	   tb = tb_find_slow(env, pc, cs_base, flags);
-    }
-    else {fprintf(stderr,"calling tb_find_fast!\n");}
+//    }
+//    else {fprintf(stderr,"calling tb_find_fast!\n");}
     
     return tb;
 }

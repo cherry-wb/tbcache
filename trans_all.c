@@ -1,5 +1,5 @@
    /***************************************************************
-  *	Optimization of Qemu translation cache policy					*
+	*	Optimization of Qemu translation cache policy					*
 	*																					*
 	*	FERJANI SABER - Tima Lab - SLS Team									*
 	*																					*
@@ -20,10 +20,11 @@
 #define g_malloc malloc
 //#define g_malloc0 malloc						// but need to add init
 
-#include <sys/mman.h>
-
+//#include <sys/mman.h>
 
 #include "trans_all.h"
+#include "main.h"
+
 
 /* code generation context */
 extern TCGContext tcg_ctx;
@@ -95,13 +96,13 @@ void tb_flush(CPUArchState *env1)
 {
     CPUArchState *env;
 
-#if defined(DEBUG_FLUSH)
+//#if defined(DEBUG_FLUSH)
     printf("qemu: flush code_size=%ld nb_tbs=%d avg_tb_size=%ld\n",
            (unsigned long)(tcg_ctx.code_gen_ptr - tcg_ctx.code_gen_buffer),
            tcg_ctx.tb_ctx.nb_tbs, tcg_ctx.tb_ctx.nb_tbs > 0 ?
            ((unsigned long)(tcg_ctx.code_gen_ptr - tcg_ctx.code_gen_buffer)) /
            tcg_ctx.tb_ctx.nb_tbs : 0);
-#endif
+//#endif
     if ((unsigned long)(tcg_ctx.code_gen_ptr - tcg_ctx.code_gen_buffer)
         > tcg_ctx.code_gen_buffer_size) {
 //        cpu_abort(env1, "Internal error: code buffer overflow\n");
@@ -122,6 +123,7 @@ void tb_flush(CPUArchState *env1)
        expensive */
     tcg_ctx.tb_ctx.tb_flush_count++;
     fprintf(stderr,"tb flush:%d\n",tcg_ctx.tb_ctx.tb_flush_count);
+    getchar();  
 }
 
 
@@ -317,6 +319,98 @@ static void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc,
 //#endif
 //    mmap_unlock();
 }
+/*----------------------------------------------------------------*/
+
+/* return non zero if the very first instruction is invalid so that
+   the virtual CPU can trigger an exception.
+
+   '*gen_code_size_ptr' contains the size of the generated code (host
+   code).
+*/
+int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr)
+{
+    TCGContext *s = &tcg_ctx;
+    uint8_t *gen_code_buf;
+    int gen_code_size;
+    extern unsigned long pc;
+    extern uint8_t src[MAX_PC][2];
+    
+    unsigned long old_pc;
+#ifdef CONFIG_PROFILER
+    int64_t ti;
+#endif
+
+#ifdef CONFIG_PROFILER
+    s->tb_count1++; /* includes aborted translations because of exceptions */
+    ti = profile_getclock();
+#endif
+//    tcg_func_start(s);
+
+//    gen_intermediate_code(env, tb);
+//	 fprintf(stderr,"pc = %d\n", pc);
+
+/*------ added part -------*/
+
+	 old_pc = pc;	
+    for(;;)
+    {
+		pc++;
+    	if ((src[pc][0]=='j') || (src[pc][0]==0)) break;
+    	}
+    if (src[pc][0]==0) 	
+    	{
+    		fprintf(stderr,"EOF at pc = %u \n",pc);
+    		fprintf(stderr," code_size=%ld nb_tbs=%d avg_tb_size=%ld\n",
+    		           	(unsigned long)(tcg_ctx.code_gen_ptr - tcg_ctx.code_gen_buffer),
+           				tcg_ctx.tb_ctx.nb_tbs, tcg_ctx.tb_ctx.nb_tbs > 0 ?
+           				((unsigned long)(tcg_ctx.code_gen_ptr - tcg_ctx.code_gen_buffer)) /
+           				tcg_ctx.tb_ctx.nb_tbs : 0);
+    		pc = 0;
+    		getchar();
+    		}
+
+	 gen_code_size = pc - old_pc;
+//	 fprintf(stderr,"pc = %u tb size = %u\n",pc, gen_code_size);
+/*------ end of added part -------*/
+
+
+    /* generate machine code */
+    gen_code_buf = tb->tc_ptr;
+    tb->tb_next_offset[0] = 0xffff;
+    tb->tb_next_offset[1] = 0xffff;
+    s->tb_next_offset = tb->tb_next_offset;
+#ifdef USE_DIRECT_JUMP
+    s->tb_jmp_offset = tb->tb_jmp_offset;
+    s->tb_next = NULL;
+#else
+    s->tb_jmp_offset = NULL;
+    s->tb_next = tb->tb_next;
+#endif
+
+#ifdef CONFIG_PROFILER
+    s->tb_count++;
+    s->interm_time += profile_getclock() - ti;
+    s->code_time -= profile_getclock();
+#endif
+//    gen_code_size = tcg_gen_code(s, gen_code_buf);
+    *gen_code_size_ptr = gen_code_size;
+#ifdef CONFIG_PROFILER
+    s->code_time += profile_getclock();
+    s->code_in_len += tb->size;
+    s->code_out_len += gen_code_size;
+#endif
+
+#ifdef DEBUG_DISAS
+    if (qemu_loglevel_mask(CPU_LOG_TB_OUT_ASM)) {
+        qemu_log("OUT: [size=%d]\n", *gen_code_size_ptr);
+        log_disas(tb->tc_ptr, *gen_code_size_ptr);
+        qemu_log("\n");
+        qemu_log_flush();
+    }
+#endif
+//	fprintf(stderr,"OUT: [size=%d]\n", *gen_code_size_ptr);	
+    return 0;
+}
 
 /*----------------------------------------------------------------*/ 
     
@@ -341,13 +435,13 @@ static void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc,
         /* Don't forget to invalidate previous TB info.  */
         tcg_ctx.tb_ctx.tb_invalidated_flag = 1;
     }
-    	fprintf(stderr, "tb = %u   # nb tb = %u \n\n", tb, tcg_ctx.tb_ctx.nb_tbs);
+//    	fprintf(stderr, "tb = %u   # nb tb = %u \n", tb, tcg_ctx.tb_ctx.nb_tbs);
     tc_ptr = tcg_ctx.code_gen_ptr;
     tb->tc_ptr = tc_ptr;
     tb->cs_base = cs_base;
     tb->flags = flags;
     tb->cflags = cflags;
-//    cpu_gen_code(env, tb, &code_gen_size);
+    cpu_gen_code(env, tb, &code_gen_size);
     tcg_ctx.code_gen_ptr = (void *)(((uintptr_t)tcg_ctx.code_gen_ptr +
             code_gen_size + CODE_GEN_ALIGN - 1) & ~(CODE_GEN_ALIGN - 1));
 
@@ -387,21 +481,6 @@ static void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc,
 #ifdef USE_STATIC_CODE_GEN_BUFFER
 static uint8_t static_code_gen_buffer[DEFAULT_CODE_GEN_BUFFER_SIZE]  __attribute__((aligned(CODE_GEN_ALIGN)));
 
-static inline void map_exec(void *addr, long size)
-{
-    unsigned long start, end, page_size;
-
-    page_size = getpagesize();
-    start = (unsigned long)addr;
-    start &= ~(page_size - 1);
-
-    end = (unsigned long)addr + size;
-    end += page_size - 1;
-    end &= ~(page_size - 1);
-
-    mprotect((void *)start, end - start,
-             PROT_READ | PROT_WRITE | PROT_EXEC);
-}
 
 static inline void *alloc_code_gen_buffer(void)
 {
@@ -472,6 +551,7 @@ static inline size_t size_code_gen_buffer(size_t tb_size)
 
 
 /*----------------------------------------------------------------*/
+
 
 
 

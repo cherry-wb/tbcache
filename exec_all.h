@@ -35,7 +35,7 @@ typedef uint64_t ram_addr_t;
 
 typedef ram_addr_t tb_page_addr_t;
 
-static inline unsigned int tb_jmp_cache_hash_func(target_ulong pc)  
+static inline unsigned int tb_jmp_cache_hash_func(target_ulong pc)	
 {
     target_ulong tmp;
     tmp = pc ^ (pc >> (TARGET_PAGE_BITS - TB_JMP_PAGE_BITS));

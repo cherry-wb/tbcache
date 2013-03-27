@@ -1,8 +1,1 @@
-tbcache
-=======
-
-Qemu translation cache model
-
-$make
-
-$./tb-cache src
+*** Qemu Translation Cache Model *** TIMA LAB - March 2013 ***
