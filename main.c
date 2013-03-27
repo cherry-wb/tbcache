@@ -16,9 +16,6 @@
 
 
 
-
-static unsigned long pc = 0;
-
 tcg_target_ulong next_tb;
 
 
@@ -80,17 +77,16 @@ int main(int argc, char **argv)
    env.tb_jmp_cache[tb_jmp_cache_hash_func(pc)] = tb;  						//added from tb_find_slow()
    
    tcg_ctx.tb_ctx.tb_invalidated_flag = 0;					
-	
+
 	printf("tcg_ctx.code_gen_ptr=%ld tcg_ctx.code_gen_buffer=%d \n",(unsigned long)(tcg_ctx.code_gen_ptr), (unsigned long) (tcg_ctx.code_gen_buffer));
    
-   tcg_ctx.code_gen_ptr=tcg_ctx.code_gen_buffer;				// init code_gen_ptr
-           
+   tcg_ctx.code_gen_ptr=tcg_ctx.code_gen_buffer;				// init code_gen_ptr -- see: tcg_exec_init()
+
    for(;;)
    	{
-   		tb = tb_find_fast(env);//tb_gen_code(env, pc ,0 ,0 , 0);							// should be called inside find_slow()
-    fprintf(stderr,"(main) tb @ = %u \n",tb->pc);
          spin_lock(&tcg_ctx.tb_ctx.tb_lock);									// why ?
-//         tb = tb_find_fast(env);
+         tb = tb_find_fast(env);
+         pc= (unsigned long)(tb->pc);
          /* Note: we do it here to avoid a gcc bug on Mac OS X when doing it in tb_find_slow */
 //       if (tcg_ctx.tb_ctx.tb_invalidated_flag) {
          /* as some TB could have been invalidated because of memory exceptions while generating the code, we must recompute the hash index here */
@@ -106,7 +102,7 @@ int main(int argc, char **argv)
 
          spin_unlock(&tcg_ctx.tb_ctx.tb_lock);
 
-/*       getchar();  */               											//step by step
+//       getchar();                 											//step by step
 
   		}
 }

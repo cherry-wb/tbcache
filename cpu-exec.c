@@ -74,9 +74,9 @@ static TranslationBlock *tb_find_slow(CPUArchState *env,
 /*static*/ inline TranslationBlock *tb_find_fast(CPUArchState *env)
 {
     TranslationBlock *tb;
-    target_ulong cs_base, pc;
+    target_ulong cs_base;		//, pc;
     int flags;
-
+	 extern unsigned long pc;
     /* we record a subset of the CPU state. It will
        always be the same before a given translated block
        is executed. */

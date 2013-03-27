@@ -349,16 +349,17 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
 //   gen_intermediate_code(env, tb);
 //	  fprintf(stderr,"pc = %d\n", pc);
 
-/*------ added part -------*/
-
+/*------------------ added part ------------------*/
+	 
 	 old_pc = pc;	
-    for(;;pc++)
+    for(;;)
     {
-    	if ((src[pc][0]=='j') || (src[pc][0]==0)) break;
-    	fprintf(stderr,"pc=%u\n",pc);
-    	}
+    	//fprintf(stderr,"pc=%u\n",pc);
+    	pc++;
+      if ((src[pc][0]=='j') || (src[pc][0]==0)) break;    	
+    }
     	
-    if (src[pc][0]==0) 	
+/*    if (src[pc][0]==0) 															// EOF should never be reached!
     	{
     		fprintf(stderr,"EOF at pc = %u \n",pc);
     		fprintf(stderr," code_size=%ld nb_tbs=%d avg_tb_size=%ld\n",
@@ -369,14 +370,18 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
     		pc = 0;
     		getchar();
     		}
-		else	 
-			tb->pc=src[pc][1];
+		else	 */
+		
+	 pc=src[pc][1];
+	 
+	 tb->pc=pc;
 	 
 	 gen_code_size = pc - old_pc;
-    		fprintf(stderr,"tb size=%u at pc = %u (old=%u) tb->pc = %u \n",gen_code_size,pc,old_pc,tb->pc);	 
+    
+    fprintf(stderr,"tb size=%u at pc = %u (old=%u) tb->pc = %u \n",gen_code_size,pc,old_pc,tb->pc);	 
 
 //	 fprintf(stderr,"pc = %u tb size = %u\n",pc, gen_code_size);
-/*------ end of added part -------*/
+/* ------------------ end of added part ------------------ */
 
 
     /* generate machine code */

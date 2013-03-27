@@ -44,6 +44,8 @@ static inline int des_adr(char* line)
 	
 	
 
+static unsigned long pc = 0;	
+
 	
 	
 #endif /* _MAIN_H_ */
