@@ -371,14 +371,16 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
     		getchar();
     		}
 		else	 */
-		
+
+	 gen_code_size = pc - old_pc;		
+	 
 	 pc=src[pc][1];
 	 
 	 tb->pc=pc;
 	 
-	 gen_code_size = pc - old_pc;
+    //getchar();
     
-    fprintf(stderr,"tb size=%u at pc = %u (old=%u) tb->pc = %u \n",gen_code_size,pc,old_pc,tb->pc);	 
+    fprintf(stderr,"nb tbs=%4d -- tb size=%4u -- pc = %4u \n",tcg_ctx.tb_ctx.nb_tbs,gen_code_size,pc);	 
 
 //	 fprintf(stderr,"pc = %u tb size = %u\n",pc, gen_code_size);
 /* ------------------ end of added part ------------------ */
@@ -434,7 +436,7 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
     target_ulong virt_page2;
     int code_gen_size;
 
-//	fprintf(stderr, "before alloc, tb= %u..\n", tb);
+//fprintf(stderr, "before alloc, tb->pc= %u..\n", tb->pc);
 //    phys_pc = get_page_addr_code(env, pc);
     tb = tb_alloc(pc);
     if (!tb) {
@@ -445,14 +447,14 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
         /* Don't forget to invalidate previous TB info.  */
         tcg_ctx.tb_ctx.tb_invalidated_flag = 1;
     }
-    fprintf(stderr, "tb->pc = %u   # nb tb = %u \n", tb->pc, tcg_ctx.tb_ctx.nb_tbs);
+//    fprintf(stderr, "TB= %u tb->pc = %u   # nb tb = %u \n", tb,tb->pc, tcg_ctx.tb_ctx.nb_tbs);
     tc_ptr = tcg_ctx.code_gen_ptr;
     tb->tc_ptr = tc_ptr;
     tb->cs_base = cs_base;
     tb->flags = flags;
     tb->cflags = cflags;
     cpu_gen_code(env, tb, &code_gen_size);
-    fprintf(stderr,"(gencode) tb -> pc = %u \n",tb->pc);
+
     tcg_ctx.code_gen_ptr = (void *)(((uintptr_t)tcg_ctx.code_gen_ptr +
             code_gen_size + CODE_GEN_ALIGN - 1) & ~(CODE_GEN_ALIGN - 1));
 
@@ -463,7 +465,8 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
 //        phys_page2 = get_page_addr_code(env, virt_page2);
     }
     tb_link_page(tb, phys_pc, phys_page2);
-    return tb;
+//    fprintf(stderr,"(gencode) tb -> pc = %u \n",tb->pc);    
+    return tb->pc;															// really just tb
 }
 
 

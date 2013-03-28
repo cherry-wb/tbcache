@@ -30,7 +30,7 @@ static TranslationBlock *tb_find_slow(CPUArchState *env,
     phys_page1 = phys_pc & TARGET_PAGE_MASK;
     h = tb_phys_hash_func(phys_pc);
     ptb1 = &tcg_ctx.tb_ctx.tb_phys_hash[h];
-    for(;;) {
+//    for(;;) {
         tb = *ptb1;
         if (!tb)
             goto not_found;
@@ -52,21 +52,23 @@ static TranslationBlock *tb_find_slow(CPUArchState *env,
             }
         }
         ptb1 = &tb->phys_hash_next;
-    }
+//    }
  not_found:
    /* if no translated code available, then translate it now */
-    tb = tb_gen_code(env, pc, cs_base, flags, 0);
+
+    pc = tb_gen_code(env, pc, cs_base, flags, 0);			//really just tb
+
 
  found:
     /* Move the last found TB to the head of the list */
-    if (likely(*ptb1)) {
+/*    if (likely(*ptb1)) {												//first worked then crashed!!
         *ptb1 = tb->phys_hash_next;
         tb->phys_hash_next = tcg_ctx.tb_ctx.tb_phys_hash[h];
         tcg_ctx.tb_ctx.tb_phys_hash[h] = tb;
-    }
+    }*/
     /* we add the TB in the virtual pc hash table */
     env->tb_jmp_cache[tb_jmp_cache_hash_func(pc)] = tb;
-    return tb;
+    return pc;
 }
 
 /*----------------------------------------------------------------*/
@@ -74,9 +76,9 @@ static TranslationBlock *tb_find_slow(CPUArchState *env,
 /*static*/ inline TranslationBlock *tb_find_fast(CPUArchState *env)
 {
     TranslationBlock *tb;
-    target_ulong cs_base;		//, pc;
+    target_ulong cs_base;		 pc;
     int flags;
-	 extern unsigned long pc;
+
     /* we record a subset of the CPU state. It will
        always be the same before a given translated block
        is executed. */
@@ -84,9 +86,9 @@ static TranslationBlock *tb_find_slow(CPUArchState *env,
     tb = env->tb_jmp_cache[tb_jmp_cache_hash_func(pc)];
 //    if (unlikely(!tb || tb->pc != pc || tb->cs_base != cs_base ||
 //                 tb->flags != flags)) {
-        tb = tb_find_slow(env, pc, cs_base, flags);
+        pc = tb_find_slow(env, pc, cs_base, flags);
 //    }
-    return tb;
+    return pc;
 }
 
 /*----------------------------------------------------------------*/

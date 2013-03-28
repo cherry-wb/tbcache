@@ -81,12 +81,12 @@ int main(int argc, char **argv)
 	printf("tcg_ctx.code_gen_ptr=%ld tcg_ctx.code_gen_buffer=%d \n",(unsigned long)(tcg_ctx.code_gen_ptr), (unsigned long) (tcg_ctx.code_gen_buffer));
    
    tcg_ctx.code_gen_ptr=tcg_ctx.code_gen_buffer;				// init code_gen_ptr -- see: tcg_exec_init()
-
+	tcg_ctx.code_gen_max_blocks  = 100;
    for(;;)
    	{
          spin_lock(&tcg_ctx.tb_ctx.tb_lock);									// why ?
-         tb = tb_find_fast(env);
-         pc= (unsigned long)(tb->pc);
+         pc = tb_find_fast(env);
+//         pc= (unsigned long)(tb->pc);
          /* Note: we do it here to avoid a gcc bug on Mac OS X when doing it in tb_find_slow */
 //       if (tcg_ctx.tb_ctx.tb_invalidated_flag) {
          /* as some TB could have been invalidated because of memory exceptions while generating the code, we must recompute the hash index here */
