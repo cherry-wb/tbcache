@@ -156,6 +156,9 @@ typedef struct SegmentCache {
 } SegmentCache;
 
 typedef struct CPUX86State {
+    
+    int tb_seg; // should be boolean
+    
     /* standard registers */
     target_ulong regs[CPU_NB_REGS];
     target_ulong eip;

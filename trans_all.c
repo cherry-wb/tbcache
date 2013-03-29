@@ -111,11 +111,11 @@ void tb_flush(CPUArchState *env1)
     tcg_ctx.tb_ctx.nb_tbs = 0;
 
 //    for (env = first_cpu; env != NULL; env = env->next_cpu) {
-//        memset(env->tb_jmp_cache, 0, TB_JMP_CACHE_SIZE * sizeof(void *));
+        memset(env->tb_jmp_cache, 0, TB_JMP_CACHE_SIZE * sizeof(void *));
 //    }
 
-//    memset(tcg_ctx.tb_ctx.tb_phys_hash, 0,
-//            CODE_GEN_PHYS_HASH_SIZE * sizeof(void *));
+    memset(tcg_ctx.tb_ctx.tb_phys_hash, 0,
+            CODE_GEN_PHYS_HASH_SIZE * sizeof(void *));
     page_flush_tb();
 
     tcg_ctx.code_gen_ptr = tcg_ctx.code_gen_buffer;
@@ -214,7 +214,56 @@ static PageDesc *page_find_alloc(tb_page_addr_t index, int alloc)
 
 /*----------------------------------------------------------------*/
 
+static inline PageDesc *page_find(tb_page_addr_t index)
+{
+    return page_find_alloc(index, 0);
+}
 
+static inline void tb_page_remove(TranslationBlock **ptb, TranslationBlock *tb)
+{
+    TranslationBlock *tb1;
+    unsigned int n1;
+
+    for (;;) {
+        tb1 = *ptb;
+        n1 = (uintptr_t)tb1 & 3;
+        tb1 = (TranslationBlock *)((uintptr_t)tb1 & ~3);
+        if (tb1 == tb) {
+            *ptb = tb1->page_next[n1];
+            break;
+        }
+        ptb = &tb1->page_next[n1];
+    }
+}
+
+static inline void tb_jmp_remove(TranslationBlock *tb, int n)
+{
+    TranslationBlock *tb1, **ptb;
+    unsigned int n1;
+
+    ptb = &tb->jmp_next[n];
+    tb1 = *ptb;
+    if (tb1) {
+        /* find tb(n) in circular list */
+        for (;;) {
+            tb1 = *ptb;
+            n1 = (uintptr_t)tb1 & 3;
+            tb1 = (TranslationBlock *)((uintptr_t)tb1 & ~3);
+            if (n1 == n && tb1 == tb) {
+                break;
+            }
+            if (n1 == 2) {
+                ptb = &tb1->jmp_first;
+            } else {
+                ptb = &tb1->jmp_next[n1];
+            }
+        }
+        /* now we can suppress tb(n) from the list */
+        *ptb = tb->jmp_next[n];
+
+        tb->jmp_next[n] = NULL;
+    }
+}
 
 /* add the tb in the target page and protect it if necessary */
 static inline void tb_alloc_page(TranslationBlock *tb,
@@ -380,7 +429,7 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
 	 
     //getchar();
     
-    fprintf(stderr,"nb tbs=%4d -- tb size=%4u -- pc = %4u \n",tcg_ctx.tb_ctx.nb_tbs,gen_code_size,pc);	 
+    fprintf(stderr,"nb tbs=%4d -- tb size=%4u -- pc = %4u -- tb = %u\n",tcg_ctx.tb_ctx.nb_tbs,gen_code_size,pc,&tb);	 
 
 //	 fprintf(stderr,"pc = %u tb size = %u\n",pc, gen_code_size);
 /* ------------------ end of added part ------------------ */
@@ -425,6 +474,93 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
 }
 
 /*----------------------------------------------------------------*/ 
+
+static inline void tb_hash_remove(TranslationBlock **ptb, TranslationBlock *tb)
+{
+    TranslationBlock *tb1;
+
+    for (;;) {
+        tb1 = *ptb;
+        if (tb1 == tb) {
+            *ptb = tb1->phys_hash_next;
+            break;
+        }
+        ptb = &tb1->phys_hash_next;
+    }
+}
+
+/* invalidate one TB */
+void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr)
+{
+    CPUArchState *env;
+    PageDesc *p;
+    unsigned int h, n1;
+    tb_page_addr_t phys_pc;
+    TranslationBlock *tb1, *tb2;
+
+    /* remove the TB from the hash list */
+    phys_pc = tb->page_addr[0] + (tb->pc & ~TARGET_PAGE_MASK);
+    h = tb_phys_hash_func(phys_pc);
+//    tb_hash_remove(&tcg_ctx.tb_ctx.tb_phys_hash[h], tb);
+
+    /* remove the TB from the page list */
+    if (tb->page_addr[0] != page_addr) {
+        p = page_find(tb->page_addr[0] >> TARGET_PAGE_BITS);
+        tb_page_remove(&p->first_tb, tb);
+        invalidate_page_bitmap(p);
+    }
+    if (tb->page_addr[1] != -1 && tb->page_addr[1] != page_addr) {
+        p = page_find(tb->page_addr[1] >> TARGET_PAGE_BITS);
+        tb_page_remove(&p->first_tb, tb);
+        invalidate_page_bitmap(p);
+    }
+
+    tcg_ctx.tb_ctx.tb_invalidated_flag = 1;
+
+    /* remove the TB from the hash list */
+    h = tb_jmp_cache_hash_func(tb->pc);
+//    for (env = first_cpu; env != NULL; env = env->next_cpu) {
+        if (env->tb_jmp_cache[h] == tb) {
+            env->tb_jmp_cache[h] = NULL;
+        }
+//    }
+
+    /* suppress this TB from the two jump lists */
+    tb_jmp_remove(tb, 0);
+    tb_jmp_remove(tb, 1);
+
+    /* suppress any remaining jumps to this TB */
+    tb1 = tb->jmp_first;
+    for (;;) {
+        n1 = (uintptr_t)tb1 & 3;
+        if (n1 == 2) {
+            break;
+        }
+        tb1 = (TranslationBlock *)((uintptr_t)tb1 & ~3);
+        tb2 = tb1->jmp_next[n1];
+        tb_reset_jump(tb1, n1);
+        tb1->jmp_next[n1] = NULL;
+        tb1 = tb2;
+    }
+    tb->jmp_first = (TranslationBlock *)((uintptr_t)tb | 2); /* fail safe */
+
+    tcg_ctx.tb_ctx.tb_phys_invalidate_count++;
+}
+
+
+
+// this function try to 
+static void tb_switch(TranslationBlock *tb)
+{
+	//	env->tb_seg = (!tb_seg);
+	fprintf(stderr,"switch occured\n");
+
+	//tb_page_addr_t page_addr;
+	//invalidate fews pages..
+	
+	tb_phys_invalidate(&tb, -1);
+}
+/*----------------------------------------------------------------*/ 
     
     TranslationBlock *tb_gen_code(CPUArchState *env,
                               target_ulong pc, target_ulong cs_base,
@@ -438,10 +574,14 @@ int cpu_gen_code(CPUArchState *env, TranslationBlock *tb, int *gen_code_size_ptr
 
 //fprintf(stderr, "before alloc, tb->pc= %u..\n", tb->pc);
 //    phys_pc = get_page_addr_code(env, pc);
+
+	 if ((tcg_ctx.tb_ctx.nb_tbs == (tcg_ctx.code_gen_max_blocks >> 1)) || (tcg_ctx.tb_ctx.nb_tbs >= tcg_ctx.code_gen_max_blocks)) tb_switch(&tb);
+
     tb = tb_alloc(pc);
     if (!tb) {
-        /* flush must be done */
-        tb_flush(env);
+		  fprintf(stderr,"Error: no more available space! tb_flush call\n");
+		  getchar();
+		  tb_flush(env);
         /* cannot fail at this point */
         tb = tb_alloc(pc);
         /* Don't forget to invalidate previous TB info.  */
